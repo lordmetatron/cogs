@@ -11,3 +11,4 @@ revoke_verification = PubSubChannel()
 can_respond_on_reaction = PubSubChannel()
 ignore_message_edit = PubSubChannel()
 ignore_message_delete = PubSubChannel()
+mute_user = PubSubChannel
