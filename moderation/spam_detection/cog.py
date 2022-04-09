@@ -27,17 +27,18 @@ class SpamDetectionCog(Cog, name="Spam Detection"):
         """
         Checks for channel-hopping
         """
-        if SpamDetectionPermission.bypass.check_permissions(member):
+
+        if await SpamDetectionPermission.bypass.check_permissions(member):
             return
 
         if before.channel == after.channel:
             return
 
-        max_hops_alert: int = await SpamDetectionSettings.max_hops_alert.get()
-        max_hops_warning: int = await SpamDetectionSettings.max_hops_warning.get()
-        max_hops_mute: int = await SpamDetectionSettings.max_hops_temp_mute.get()
+        hops_alert: int = await SpamDetectionSettings.max_hops_alert.get()
+        hops_warning: int = await SpamDetectionSettings.max_hops_warning.get()
+        hops_mute: int = await SpamDetectionSettings.max_hops_temp_mute.get()
         duration: int = await SpamDetectionSettings.temp_mute_duration.get()
-        if max_hops_alert <= 0 or max_hops_warning <= 0 or max_hops_mute <= 0:
+        if hops_alert <= 0 and hops_warning <= 0 and hops_mute <= 0:
             return
 
         ts = time.time()
@@ -46,7 +47,7 @@ class SpamDetectionCog(Cog, name="Spam Detection"):
         await redis.expire(key, 60)
         hops: int = await redis.zcount(key, "-inf", "inf")
 
-        if hops >= max_hops_alert and not await redis.exists(key := f"channel_hops_alert_sent:user={member.id}"):
+        if hops >= hops_alert and not await redis.exists(key := f"channel_hops_alert_sent:user={member.id}"):
             await redis.setex(key, 10, 1)
             embed = Embed(
                 title=t.channel_hopping, color=Colors.SpamDetection, description=t.hops_in_last_minute(cnt=hops)
@@ -58,12 +59,12 @@ class SpamDetectionCog(Cog, name="Spam Detection"):
                 embed.add_field(name=t.current_channel, value=after.channel.name)
             await send_alert(member.guild, embed)
 
-        if hops >= max_hops_warning and not redis.exists(key := f"channel_hops_warning_sent:user={member.id}"):
+        if hops >= hops_warning and not await redis.exists(key := f"channel_hops_warning_sent:user={member.id}"):
             await redis.setex(key, 10, 1)
             embed = Embed(title=t.channel_hopping_warning_sent, color=Colors.SpamDetection)
             await member.send(embed=embed)
 
-        if hops >= max_hops_mute or duration > 0 and not redis.exists(key := f"channel_hops_mute:user={member.id}"):
+        if (hops >= hops_mute or duration > 0) and not await redis.exists(key := f"channel_hops_mute:user={member.id}"):
             mute_user(member, duration)  # TODO Missing pub-sub channel for that
             await redis.setex(key, 10, 1)
 
