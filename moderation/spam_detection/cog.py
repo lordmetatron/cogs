@@ -65,7 +65,7 @@ class SpamDetectionCog(Cog, name="Spam Detection"):
             await member.send(embed=embed)
 
         if (hops >= hops_mute or duration > 0) and not await redis.exists(key := f"channel_hops_mute:user={member.id}"):
-            mute_user(member, duration)  # TODO Missing pub-sub channel for that
+            await mute_user(member, duration)  # TODO Missing pub-sub channel for that
             await redis.setex(key, 10, 1)
 
     @commands.group(aliases=["spam", "sd"])
